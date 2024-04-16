@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decentralized Marketplace</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Decentralized Marketplace</h1>  
+    
+    <section>
+        <h2>Available Items</h2>
+        <div id="items-list">
+        </div>
+    </section>
+    
+    <section>
+        <h2>List a New Item</h2>
+        <form id="list-item-form">
+            <label for="itemName">Item Name:</label>
+            <input type="text" id="itemName" name="itemName" required>
+            
+            <label for="itemPrice">Price:</label>
+            <input type="number" id="itemPrice" name="itemPrice" required>
+            
+            <label for="itemDescription">Description:</label>
+            <textarea id="itemDescription" name="itemDescription" required></textarea>
+            
+            <button type="submit">List Item</button>
+        </form>
+    </section>
+    
+    <section>
+        <h2>Buy Items</h2>
+        <div id="buy-items">
+        </div>
+    </section>
+    
+    <script src="app.js"></script>
+</body>
+</html>
