@@ -1,56 +1,56 @@
-const Marketplace = artifacts.require("./Marketplace.sol");
-require('dotenv').config(); 
+const MarketplaceContract = artifacts.require("./Marketplace.sol");
+require('dotenv').config();
 
 contract('Marketplace', (accounts) => {
-    let marketplace;
-    const productPrice = web3.utils.toWei('1', 'Ether');
-    const seller = accounts[1];
-    const buyer = accounts[2];
-    const nonExistentItemId = 99999;
+    let marketplaceInstance;
+    const itemPriceInWei = web3.utils.toWei('1', 'Ether');
+    const accountSeller = accounts[1];
+    const accountBuyer = accounts[2];
+    const invalidItemId = 99999;
 
     before(async () => {
-        marketplace = await Marketplace.deployed();
+        marketplaceInstance = await MarketplaceContract.deployed();
     });
 
-    it('allows a user to list an item successfully', async () => {
-        const receipt = await marketplace.createProduct('iPhone X', productPrice, { from: seller });
-        assert.equal(receipt.logs.length, 1, 'triggers one event');
-        const event = receipt.logs[0].args;
-        assert.equal(event.id.toNumber(), 1, 'id is correct');
-        assert.equal(event.name, 'iPhone X', 'name is correct');
-        assert.equal(event.price.toString(), productPrice, 'price is correct');
-        assert.equal(event.owner, seller, 'seller is correct');
-        assert.equal(event.purchased, false, 'purchased boolean is correct');
+    it('enables listing of a new item by a seller', async () => {
+        const transactionReceipt = await marketplaceInstance.createProduct('iPhone X', itemPriceInWei, { from: accountSeller });
+        assert.equal(transactionReceipt.logs.length, 1, 'triggers one event');
+        const logEvent = transactionReceipt.logs[0].args;
+        assert.equal(logEvent.id.toNumber(), 1, 'id is correct');
+        assert.equal(logEvent.name, 'iPhone X', 'name is correct');
+        assert.equal(logEvent.price.toString(), itemPriceInWei, 'price is correct');
+        assert.equal(logEvent.owner, accountSeller, 'seller account is correct');
+        assert.equal(logEvent.purchased, false, 'purchased status is correct');
     });
 
-    it('allows a user to purchase an item successfully', async () => {
-        const oldSellerBalance = await web3.eth.getBalance(seller);
-        const receipt = await marketplace.purchaseProduct(1, { from: buyer, value: productPrice });
-        const event = receipt.logs[0].args;
-        assert.equal(event.id.toNumber(), 1, 'id is correct');
-        assert.equal(event.purchased, true, 'purchased status is correct');
-        const newSellerBalance = await web3.eth.getBalance(seller);
-        const price = web3.utils.toBN(productPrice);
-        const expectedBalance = web3.utils.toBN(oldSellerBalance).add(price);
-        assert.equal(newSellerBalance.toString(), expectedBalance.toString(), 'seller received funds');
+    it('facilitates the successful purchase of an item by a buyer', async () => {
+        const sellerBalanceBeforeSale = await web3.eth.getBalance(accountSeller);
+        const transactionReceipt = await marketplaceInstance.purchaseProduct(1, { from: accountBuyer, value: itemPriceInWei });
+        const logEvent = transactionReceipt.logs[0].args;
+        assert.equal(logEvent.id.toNumber(), 1, 'id is correct');
+        assert.equal(logEvent.purchased, true, 'purchased status is correct');
+        const sellerBalanceAfterSale = await web3.eth.getBalance(accountSeller);
+        const priceBN = web3.utils.toBN(itemPriceInWei);
+        const expectedSellerBalanceAfterSale = web3.utils.toBN(sellerBalanceBeforeSale).add(priceBN);
+        assert.equal(sellerBalanceAfterSale.toString(), expectedSellerBalanceAfterSale.toString(), 'seller received correct funds');
     });
 
-    it('prevents a user from buying a non-existent item', async () => {
+    it('blocks the purchase of an item that does not exist', async () => {
         try {
-            await marketplace.purchaseProduct(nonExistentItemId, { from: buyer, value: productPrice });
-            assert.fail('The purchase transaction should not have succeeded');
-        } catch (err) {
-            assert.include(err.message, 'revert', 'Error message should contain "revert"');
+            await marketplaceInstance.purchaseProduct(invalidItemId, { from: accountBuyer, value: itemPriceInWei });
+            assert.fail('Expected transaction to fail for non-existent item');
+        } catch (error) {
+            assert.include(error.message, 'revert', 'expected error message to contain "revert"');
         }
     });
 
-    it('prevents a user from buying an item with insufficient funds', async () => {
+    it('prevents purchase of an item with insufficient payment', async () => {
         try {
-            const insufficientAmount = web3.utils.toWei('0.5', 'Ether');
-            await marketplace.purchaseProduct(1, { from: buyer, value: insufficientAmount });
-            assert.fail('The purchase transaction should not have succeeded');
-        } catch (err) {
-            assert.include(err.message, 'revert', 'Error message should contain "revert"');
+            const insufficientPayment = web3.utils.toWei('0.5', 'Ether');
+            await marketplaceInstance.purchaseProduct(1, { from: accountBuyer, value: insufficientPayment });
+            assert.fail('Expected transaction to fail for insufficient payment');
+        } catch (error) {
+            assert.include(error.message, 'revert', 'expected error message to contain "revert"');
         }
     });
 });
