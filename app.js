@@ -36,8 +36,20 @@ async function displayItems() {
   }
 }
 
+async function cancelListing(itemId) {
+  try {
+    const accounts = await web3.eth.getAccounts();
+    await marketplaceContract.methods.cancelItem(itemId)
+      .send({ from: accounts[0] });
+    console.log("Listing cancelled successfully for item: ", itemId);
+  } catch (error) {
+    console.error("Error cancelling listing: ", error.message);
+  }
+}
+
 (async () => {
   await listItem(web3.utils.toWei('0.1', 'ether'), 1);
   await buyItem(1, web3.utils.toWei('0.1', 'ether'));
   await displayItems();
+  await cancelListing(1);
 })();
