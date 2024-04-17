@@ -12,7 +12,9 @@
     <section>
         <h2>Available Items</h2>
         <div id="items-list">
+            <!-- Items will be listed here -->
         </div>
+        <button id="refresh-items" onclick="refreshItems()">Refresh Items</button>
     </section>
     
     <section>
@@ -34,9 +36,16 @@
     <section>
         <h2>Buy Items</h2>
         <div id="buy-items">
+            <!-- Items available for purchase will be listed here -->
         </div>
     </section>
     
     <script src="app.js"></script>
+    <script>
+        function refreshItems() {
+            console.log('Refreshing items list...');
+            // Implementation logic to refresh items list goes here.
+        }
+    </script>
 </body>
 </html>
