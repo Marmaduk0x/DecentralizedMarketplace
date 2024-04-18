@@ -47,9 +47,23 @@ async function cancelListing(itemId) {
   }
 }
 
+// New function to update the price of an already listed item
+async function updateItemPrice(itemId, newItemPrice) {
+  try {
+    const accounts = await web3.eth.getAccounts();
+    await marketplaceContract.methods.updateItemPrice(itemId, newItemPrice)
+      .send({ from: accounts[0] });
+    console.log("Item price updated successfully for item: ", itemId);
+  } catch (error) {
+    console.error("Error updating item price: ", error.message);
+  }
+}
+
 (async () => {
   await listItem(web3.utils.toWei('0.1', 'ether'), 1);
-  await buyItem(1, web3.utils.toWei('0.1', 'ether'));
+  // Update item price, assuming the item ID 1 and new price to be 0.2 Ether
+  await updateItemPrice(1, web3.utils.toWei('0.2', 'ether'));
+  await buyItem(1, web3.utils.toWei('0.2', 'ether'));
   await displayItems();
   await cancelListing(1);
 })();
