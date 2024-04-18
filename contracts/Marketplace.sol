@@ -1,69 +1,69 @@
 pragma solidity ^0.8.0;
 
 contract DecentralizedMarketplace {
-    event ItemListed(address indexed owner, uint itemId, uint price);
-    event ItemPurchased(address indexed buyer, uint itemId, uint price);
+    event ItemListed(address indexed seller, uint itemId, uint price);
+    event ItemPurchased(address indexed buyer, uint itemId, uint purchasePrice);
 
     struct Item {
-        address payable seller;
-        uint price;
-        address owner;
-        bool listed;
+        address payable sellerAddress;
+        uint listingPrice;
+        address ownerAddress;
+        bool isCurrentlyListed;
     }
 
-    mapping(uint => Item) public items;
-    uint public itemCount;
+    mapping(uint => Item) public listedItems;
+    uint public totalListedItems;
 
-    error NotSeller();
-    error ItemDoesNotExist();
-    error ItemNotListed();
-    error InsufficientFunds();
-    error SellerCannotBuy();
-    error ItemAlreadyListed();
+    error UnauthorizedSeller();
+    error ItemNotFound();
+    error ItemUnlisted();
+    error PaymentNotSufficient();
+    error SellerCannotPurchase();
+    error ItemAlreadyOnSale();
 
-    modifier onlySeller(uint itemId) {
-        if (msg.sender != items[itemId].seller) revert NotSeller();
+    modifier onlyItemSeller(uint itemId) {
+        if (msg.sender != listedItems[itemId].sellerAddress) revert UnauthorizedSeller();
         _;
     }
 
-    modifier exists(uint itemId) {
-        if (itemId >= itemCount) revert ItemDoesNotExist();
+    modifier itemExists(uint itemId) {
+        if (itemId >= totalListedItems) revert ItemNotFound();
         _;
     }
 
-    modifier isListed(uint itemId) {
-        if (!items[itemId].listed) revert ItemNotListed();
+    modifier isItemListed(uint itemId) {
+        if (!listedItems[itemId].isCurrentlyListed) revert ItemUnlisted();
         _;
     }
 
     function listItem(uint price) external {
-        items[itemCount] = Item(payable(msg.sender), price, address(0), true);
-        emit ItemListed(msg.sender, itemCount, price);
-        itemCount++;
+        listedItems[totalListedItems] = Item(payable(msg.sender), price, address(0), true);
+        emit ItemListed(msg.sender, totalListedItems, price);
+        totalListedItems++;
     }
 
-    function buyItem(uint itemId) external payable exists(itemId) isListed(itemId) {
-        Item storage item = items[itemId];
+    function purchaseItem(uint itemId) external payable itemExists(itemId) isItemListed(itemId) {
+        Item storage item = listedItems[itemId];
 
-        if (msg.value < item.price) revert InsufficientFunds();
-        if (msg.sender == item.seller) revert SellerCannotBuy();
+        if (msg.value < item.listingPrice) revert PaymentNotSufficient();
+        if (msg.sender == item.sellerAddress) revert SellerCannotPurchase();
 
-        item.seller.transfer(item.price);
-        item.owner = msg.sender;
-        item.listed = false;
+        item.sellerAddress.transfer(item.listingPrice);
+        item.ownerAddress = msg.sender;
+        item.isCurrentlyListed = false;
 
-        emit ItemPurchased(msg.sender, itemId, item.price);
+        emit ItemPurchased(msg.sender, itemId, item.listingPrice);
     }
 
-    function delistItem(uint itemId) external onlySeller(itemId) exists(itemId) isListed(itemId) {
-        items[itemId].listed = false;
+    function removeListing(uint itemId) external onlyItemSeller(itemId) itemExists(itemId) isItemListed(itemId) {
+        listedItems[itemId].isCurrentlyListed = false;
     }
 
-    function relistItem(uint itemId, uint newPrice) external onlySeller(itemId) exists(itemId) {
-        if (items[itemId].listed) revert ItemAlreadyListed();
+    function relistItem(uint itemId, uint newPrice) external onlyItemSeller(itemId) itemExists(itemId) {
+        if (listedItems[itemId].isCurrentlyListed) revert ItemAlreadyOnSale();
 
-        items[itemId].price = newPrice;
-        items[itemId].listed = true;
+        listedItems[itemId].listingPrice = newPrice;
+        listedItems[itemId].isCurrentlyListed = true;
         emit ItemListed(msg.sender, itemId, newPrice);
     }
 }
