@@ -1,9 +1,15 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+/**
+ * @title Decentralized Marketplace
+ * @dev Implementation of a marketplace smart contract
+ */
 contract DecentralizedMarketplace {
-    event ProductListed(address indexed seller, uint productId, uint listingPrice);
-    event ProductPurchased(address indexed buyer, uint productId, uint salePrice);
+    // State variables
+    uint public itemCount;
 
+    // Structs
     struct Product {
         address payable seller;
         uint price;
@@ -11,9 +17,14 @@ contract DecentralizedMarketplace {
         bool listed;
     }
 
+    // Mappings
     mapping(uint => Product) public catalog;
-    uint public itemCount;
 
+    // Events
+    event ProductListed(address indexed seller, uint productId, uint listingPrice);
+    event ProductPurchased(address indexed buyer, uint productId, uint salePrice);
+
+    // Errors
     error NotSeller();
     error ProductDoesNotExist();
     error NotForSale();
@@ -21,6 +32,7 @@ contract DecentralizedMarketplace {
     error BuyerIsSeller();
     error AlreadyListed();
 
+    // Modifiers
     modifier onlySeller(uint productId) {
         if (msg.sender != catalog[productId].seller) revert NotSeller();
         _;
@@ -36,12 +48,20 @@ contract DecentralizedMarketplace {
         _;
     }
 
+    /**
+    * @dev List a new product on the marketplace
+    * @param price Price of the product to list
+    */
     function listProduct(uint price) external {
         catalog[itemCount] = Product(payable(msg.sender), price, address(0), true);
         emit ProductListed(msg.sender, itemCount, price);
         itemCount++;
     }
 
+    /**
+    * @dev Purchase a listed product
+    * @param productId The ID of the product to purchase
+    */
     function buyProduct(uint productId) external payable productMustExist(productId) isForSale(productId) {
         Product storage product = catalog[productId];
 
@@ -55,10 +75,19 @@ contract DecentralizedMarketplace {
         emit ProductPurchased(msg.sender, productId, product.price);
     }
 
+    /**
+    * @dev Delist a product from sale
+    * @param productId The ID of the product to delist
+    */
     function delistProduct(uint productId) external onlySeller(productId) productMustExist(productId) isForSale(productId) {
         catalog[productId].listed = false;
     }
 
+    /**
+    * @dev Relist a product with a new price
+    * @param productId The ID of the product to relist
+    * @param newPrice The new price of the product
+    */
     function relistProduct(uint productId, uint newPrice) external onlySeller(productId) productMustExist(productId) {
         if (catalog[productId].listed) revert AlreadyListed();
 
