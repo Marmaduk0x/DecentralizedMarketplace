@@ -1,69 +1,69 @@
 pragma solidity ^0.8.0;
 
 contract DecentralizedMarketplace {
-    event ItemListed(address indexed seller, uint itemId, uint price);
-    event ItemPurchased(address indexed buyer, uint itemId, uint purchasePrice);
+    event ProductListed(address indexed seller, uint productId, uint listingPrice);
+    event ProductPurchased(address indexed buyer, uint productId, uint salePrice);
 
-    struct Item {
-        address payable sellerAddress;
-        uint listingPrice;
-        address ownerAddress;
-        bool isCurrentlyListed;
+    struct Product {
+        address payable seller;
+        uint price;
+        address buyer;
+        bool listed;
     }
 
-    mapping(uint => Item) public listedItems;
-    uint public totalListedItems;
+    mapping(uint => Product) public catalog;
+    uint public itemCount;
 
-    error UnauthorizedSeller();
-    error ItemNotFound();
-    error ItemUnlisted();
-    error PaymentNotSufficient();
-    error SellerCannotPurchase();
-    error ItemAlreadyOnSale();
+    error NotSeller();
+    error ProductDoesNotExist();
+    error NotForSale();
+    error InsufficientPayment();
+    error BuyerIsSeller();
+    error AlreadyListed();
 
-    modifier onlyItemSeller(uint itemId) {
-        if (msg.sender != listedItems[itemId].sellerAddress) revert UnauthorizedSeller();
+    modifier onlySeller(uint productId) {
+        if (msg.sender != catalog[productId].seller) revert NotSeller();
         _;
     }
 
-    modifier itemExists(uint itemId) {
-        if (itemId >= totalListedItems) revert ItemNotFound();
+    modifier productMustExist(uint productId) {
+        if (productId >= itemCount) revert ProductDoesNotExist();
         _;
     }
 
-    modifier isItemListed(uint itemId) {
-        if (!listedItems[itemId].isCurrentlyListed) revert ItemUnlisted();
+    modifier isForSale(uint productId) {
+        if (!catalog[productId].listed) revert NotForSale();
         _;
     }
 
-    function listItem(uint price) external {
-        listedItems[totalListedItems] = Item(payable(msg.sender), price, address(0), true);
-        emit ItemListed(msg.sender, totalListedItems, price);
-        totalListedItems++;
+    function listProduct(uint price) external {
+        catalog[itemCount] = Product(payable(msg.sender), price, address(0), true);
+        emit ProductListed(msg.sender, itemCount, price);
+        itemCount++;
     }
 
-    function purchaseItem(uint itemId) external payable itemExists(itemId) isItemListed(itemId) {
-        Item storage item = listedItems[itemId];
+    function buyProduct(uint productId) external payable productMustExist(productId) isForSale(productId) {
+        Product storage product = catalog[productId];
 
-        if (msg.value < item.listingPrice) revert PaymentNotSufficient();
-        if (msg.sender == item.sellerAddress) revert SellerCannotPurchase();
+        if (msg.value < product.price) revert InsufficientPayment();
+        if (msg.sender == product.seller) revert BuyerIsSeller();
 
-        item.sellerAddress.transfer(item.listingPrice);
-        item.ownerAddress = msg.sender;
-        item.isCurrentlyListed = false;
+        product.seller.transfer(product.price);
+        product.buyer = msg.sender;
+        product.listed = false;
 
-        emit ItemPurchased(msg.sender, itemId, item.listingPrice);
+        emit ProductPurchased(msg.sender, productId, product.price);
     }
 
-    function removeListing(uint itemId) external onlyItemSeller(itemId) itemExists(itemId) isItemListed(itemId) {
-        listedItems[itemId].isCurrentlyListed = false;
+    function delistProduct(uint productId) external onlySeller(productId) productMustExist(productId) isForSale(productId) {
+        catalog[productId].listed = false;
     }
 
-    function relistItem(uint itemId, uint newPrice) external onlyItemSeller(itemId) itemExists(itemId) {
-        if (listedItems[itemId].isCurrentlyListed) revert ItemAlreadyOnSale();
+    function relistProduct(uint productId, uint newPrice) external onlySeller(productId) productMustExist(productId) {
+        if (catalog[productId].listed) revert AlreadyListed();
 
-        listedItems[itemId].listingPrice = newPrice;
-        listedItems[itemId].isCurrentlyListed = true;
-        emit ItemListed(msg.sender, itemId, newPrice);
+        catalog[productId].price = newPrice;
+        catalog[productId].listed = true;
+        emit ProductListed(msg.sender, productId, newPrice);
     }
 }
