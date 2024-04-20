@@ -34,11 +34,14 @@ contract DecentralizedMarketplace {
 
     // Modifiers
     modifier onlySeller(uint productId) {
-        if (msg.sender != catalog[productId].seller) revert NotSeller();
+        Product storage product = catalog[productId];
+        if (msg.sender != product.seller) revert NotSeller();
         _;
     }
 
     modifier productMustExist(uint productId) {
+        // Since we're only increasing itemCount with each new product,
+        // checking productId < itemCount ensures the product must exist if true.
         if (productId >= itemCount) revert ProductDoesNotExist();
         _;
     }
@@ -68,7 +71,10 @@ contract DecentralizedMarketplace {
         if (msg.value < product.price) revert InsufficientPayment();
         if (msg.sender == product.seller) revert BuyerIsSeller();
 
+        // Transfer first to reduce risk of re-entrancy attacks
         product.seller.transfer(product.price);
+        
+        // Update state after effect
         product.buyer = msg.sender;
         product.listed = false;
 
