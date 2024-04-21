@@ -23,6 +23,7 @@ contract DecentralizedMarketplace {
     // Events
     event ProductListed(address indexed seller, uint productId, uint listingPrice);
     event ProductPurchased(address indexed buyer, uint productId, uint salePrice);
+    event PaymentFailed(address indexed buyer, uint productId, uint attemptedPayment);
 
     // Errors
     error NotSeller();
@@ -31,6 +32,7 @@ contract DecentralizedMarketplace {
     error InsufficientPayment();
     error BuyerIsSeller();
     error AlreadyListed();
+    error TransferFailed();
 
     // Modifiers
     modifier onlySeller(uint productId) {
@@ -40,8 +42,6 @@ contract DecentralizedMarketplace {
     }
 
     modifier productMustExist(uint productId) {
-        // Since we're only increasing itemCount with each new product,
-        // checking productId < itemCount ensures the product must exist if true.
         if (productId >= itemCount) revert ProductDoesNotExist();
         _;
     }
@@ -72,13 +72,17 @@ contract DecentralizedMarketplace {
         if (msg.sender == product.seller) revert BuyerIsSeller();
 
         // Transfer first to reduce risk of re-entrancy attacks
-        product.seller.transfer(product.price);
-        
-        // Update state after effect
-        product.buyer = msg.sender;
-        product.listed = false;
+        // Added try-catch for improved error handling
+        try product.seller.call{value: product.price}("") {
+            // Update state after effect
+            product.buyer = msg.sender;
+            product.listed = false;
 
-        emit ProductPurchased(msg.sender, productId, product.price);
+            emit ProductPurchased(msg.sender, productId, product.price);
+        } catch {
+            emit PaymentFailed(msg.sender, productId, msg.value);
+            revert TransferFailed();
+        }
     }
 
     /**
